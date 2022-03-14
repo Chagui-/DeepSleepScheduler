@@ -20,12 +20,13 @@ void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(SleepMethod
 
 #ifdef ESP32
 // -------------------------------------------------------------------------------------------------
+extern "C"
+{
+  #include <esp_clk.h>
+}
+
 unsigned long Scheduler::getMillis() const {
-  // read RTC clock which runs from initial boot/reset (also during sleep)
-  // https://forum.makehackvoid.com/t/playing-with-the-esp-32/1144/11
-  uint64_t rtcTime = rtc_time_get();
-  uint64_t rtcTimeUs = rtcTime * 20 / 3;  // ticks -> us 1,000,000/150,000
-  return rtcTimeUs / 1000;
+  return rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get()) / 1000;
 }
 
 void IRAM_ATTR Scheduler::isrWatchdogExpiredStatic() {
@@ -261,7 +262,7 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
   // if the sleep time is high enough, use deep sleep, else use light sleep
   if (durationMs > 20000L)
   {
-    sleep_duration_ms = durationMs / 3 * 2; // sleep for a fraction of the time, to account for inacurate clock
+    sleep_duration_ms = durationMs / 10 * 9; // sleep for a fraction of the time, to account for inacurate clock
     // call callback if defined
     if (before_sleep_callback) {
       before_sleep_callback(SleepMethod::DEEP_SLEEP, sleep_duration_ms);

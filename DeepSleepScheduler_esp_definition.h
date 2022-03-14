@@ -41,7 +41,6 @@ void sleepIfRequired();
 inline void sleep(unsigned long durationMs, bool queueEmpty);
 inline SleepMode evaluateSleepMode();
 
-
 // unused here, only used for AVR
 bool isWakeupByOtherInterrupt() {
   return false;
