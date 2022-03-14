@@ -236,13 +236,6 @@ class Scheduler {
     }
 
     /**
-      Sets the queue of tasks to execute to a linked list of tasks.
-    */
-    void setTaskQueue(Task* queue) {
-      first = queue;
-    }
-
-    /**
       Configure the supervision of future tasks. Can be deactivated with NO_SUPERVISION.
       Default: TIMEOUT_8S
       @param taskTimeout: The task timeout to be used
