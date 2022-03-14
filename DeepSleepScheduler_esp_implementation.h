@@ -14,6 +14,10 @@
 #define ESP8266_MAX_DELAY_TIME_WDT_MS 7500
 void Scheduler::init() {}
 
+void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(SleepMethod sleep_method, unsigned long sleep_duration)) {
+  this->before_sleep_callback = before_sleep_callback;
+}
+
 #ifdef ESP32
 // -------------------------------------------------------------------------------------------------
 unsigned long Scheduler::getMillis() const {
@@ -237,6 +241,7 @@ inline Scheduler::SleepMode Scheduler::evaluateSleepMode() {
 #ifdef ESP32
 // -------------------------------------------------------------------------------------------------
 void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
+  unsigned long sleep_duration_ms = durationMs;
   bool timerWakeup;
   if (durationMs > 0) {
     esp_sleep_enable_timer_wakeup(durationMs * 1000L);
@@ -252,15 +257,33 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
     timerWakeup = true;
   }
 
-  esp_light_sleep_start();
+
+  // if the sleep time is high enough, use deep sleep, else use light sleep
+  if (durationMs > 20000L)
+  {
+    sleep_duration_ms = durationMs / 3 * 2; // sleep for a fraction of the time, to account for inacurate clock
+    // call callback if defined
+    if (before_sleep_callback) {
+      before_sleep_callback(SleepMethod::DEEP_SLEEP, sleep_duration_ms);
+    }
+    esp_sleep_enable_timer_wakeup(sleep_duration_ms * 1000L);
+    esp_deep_sleep_start();
+  } else {
+    // call callback if defined
+    if (before_sleep_callback) {
+      before_sleep_callback(SleepMethod::LIGHT_SLEEP, sleep_duration_ms);
+    }
+    esp_light_sleep_start();
+  }
 
   if (timerWakeup) {
-    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER); // huh?
   }
 }
 #elif ESP8266
 // -------------------------------------------------------------------------------------------------
 void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
+  unsigned long sleep_duration_ms = durationMs;
 #ifdef ESP_DEEP_SLEEP_FOR_INFINITE_SLEEP
   if (queueEmpty) {
     ESP.deepSleep(0); // does not return
@@ -269,6 +292,11 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
 
   if (durationMs > ESP8266_MAX_DELAY_TIME_MS) {
     durationMs = ESP8266_MAX_DELAY_TIME_MS;
+  }
+
+  // call callback if defined
+  if (before_sleep_callback) {
+    before_sleep_callback(SleepMethod::ACTIVE, sleep_duration_ms);
   }
 
   delay(durationMs);
