@@ -262,7 +262,7 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
   // if the sleep time is high enough, use deep sleep, else use light sleep
   if (durationMs > 20000L)
   {
-    sleep_duration_ms = durationMs / 10 * 9; // sleep for a fraction of the time, to account for inacurate clock
+    sleep_duration_ms = durationMs * 0.95; // sleep for a fraction of the time, to account for inacurate clock
     // call callback if defined
     if (before_sleep_callback) {
       before_sleep_callback(SleepMethod::DEEP_SLEEP, sleep_duration_ms);
