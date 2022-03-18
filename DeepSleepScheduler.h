@@ -64,16 +64,14 @@ class Runnable {
   public:
     virtual void run() = 0;
 };
-enum SleepMethod {
-  ACTIVE,
-  MODEM_SLEEP,
-  LIGHT_SLEEP,
-  DEEP_SLEEP,
-  HYBERNATION
-};
 
 class Scheduler {
   public:
+    enum SleepMethod {
+      LIGHT_SLEEP,
+      DEEP_SLEEP,
+      HYBERNATION
+    };
     class Task {
       public:
         Task(const unsigned long scheduledUptimeMillis, const bool isCallbackTask, const char * task_id)

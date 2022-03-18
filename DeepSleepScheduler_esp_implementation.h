@@ -14,7 +14,7 @@
 #define ESP8266_MAX_DELAY_TIME_WDT_MS 7500
 void Scheduler::init() {}
 
-void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(SleepMethod sleep_method, unsigned long sleep_duration)) {
+void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(Scheduler::SleepMethod sleep_method, unsigned long sleep_duration)) {
   this->before_sleep_callback = before_sleep_callback;
 }
 
