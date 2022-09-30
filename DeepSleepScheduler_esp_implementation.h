@@ -26,7 +26,9 @@ extern "C"
 }
 
 unsigned long Scheduler::getMillis() const {
-  return rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get()) / 1000;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec - 1640998800)*1000+tv.tv_usec/1000; // substract epoch from 2020
 }
 
 void IRAM_ATTR Scheduler::isrWatchdogExpiredStatic() {
