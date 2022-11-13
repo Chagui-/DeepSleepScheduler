@@ -16,7 +16,7 @@ public:
 /**
     Callback executed just before sleep start.
 */
-void setBeforeSleepCallback(void (*before_sleep_callback)(SleepMethod, unsigned long));
+void setBeforeSleepCallback(void (*before_sleep_callback)(SleepMethod, uint64_t));
 
 #ifdef ESP32
 // ---------------------------------------------------------------------------------------------
@@ -36,9 +36,9 @@ public:
 private:
 void taskWdtEnable(const uint8_t value);
 void taskWdtDisable();
-inline unsigned long wdtTimeoutToDurationMs(const uint8_t value);
+inline uint64_t wdtTimeoutToDurationMs(const uint8_t value);
 void sleepIfRequired();
-inline void sleep(unsigned long durationMs, bool queueEmpty);
+inline void sleep(uint64_t durationMs, bool queueEmpty);
 inline SleepMode evaluateSleepMode();
 
 // unused here, only used for AVR
@@ -47,5 +47,5 @@ bool isWakeupByOtherInterrupt() {
 }
 void wdtEnableInterrupt() {}
 
-void (*before_sleep_callback)(SleepMethod, unsigned long) = nullptr;
+void (*before_sleep_callback)(SleepMethod, uint64_t) = nullptr;
 

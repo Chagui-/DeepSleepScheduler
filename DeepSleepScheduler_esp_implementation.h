@@ -14,7 +14,7 @@
 #define ESP8266_MAX_DELAY_TIME_WDT_MS 7500
 void Scheduler::init() {}
 
-void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(Scheduler::SleepMethod sleep_method, unsigned long sleep_duration)) {
+void Scheduler::setBeforeSleepCallback(void (*before_sleep_callback)(Scheduler::SleepMethod sleep_method, uint64_t sleep_duration)) {
   this->before_sleep_callback = before_sleep_callback;
 }
 
@@ -25,8 +25,11 @@ extern "C"
   #include <esp_clk.h>
 }
 
-unsigned long Scheduler::getMillis() const {
-  return rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get()) / 1000;
+uint64_t Scheduler::getMillis() const {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (tv.tv_sec)*1000+tv.tv_usec/1000; // substract epoch from 2020
+  // return rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get()) / 1000;
 }
 
 void IRAM_ATTR Scheduler::isrWatchdogExpiredStatic() {
@@ -51,7 +54,7 @@ void IRAM_ATTR isrWatchdogExpired() {
 
 void Scheduler::taskWdtEnable(const uint8_t value) {
   if (value != NO_SUPERVISION) {
-    const unsigned long durationMs = wdtTimeoutToDurationMs(value);
+    const uint64_t durationMs = wdtTimeoutToDurationMs(value);
     if (timer == NULL) {
       // div 80
       timer = timerBegin(ESP32_TASK_WDT_TIMER_NUMBER, 80, true);
@@ -87,13 +90,13 @@ void Scheduler::taskWdtReset() {
 
 #elif ESP8266
 // -------------------------------------------------------------------------------------------------
-unsigned long Scheduler::getMillis() const {
+uint64_t Scheduler::getMillis() const {
   // on ESP8266 we do not support sleep, so millis() stays correct.
   return millis();
 }
 
 void Scheduler::taskWdtEnable(const uint8_t value) {
-  const unsigned long durationMs = wdtTimeoutToDurationMs(value);
+  const uint64_t durationMs = wdtTimeoutToDurationMs(value);
   ESP.wdtEnable(durationMs);
 }
 
@@ -107,8 +110,8 @@ void Scheduler::taskWdtReset() {
 #endif
 // -------------------------------------------------------------------------------------------------
 
-inline unsigned long Scheduler::wdtTimeoutToDurationMs(const uint8_t value) {
-  unsigned long durationMs;
+inline uint64_t Scheduler::wdtTimeoutToDurationMs(const uint8_t value) {
+  uint64_t durationMs;
   switch (value) {
     case TIMEOUT_15Ms: {
         durationMs = 15;
@@ -184,14 +187,14 @@ void Scheduler::sleepIfRequired() {
     if (sleepMode == SLEEP) {
       taskWdtDisable();
       noInterrupts();
-      unsigned long currentSchedulerMillis = getMillis();
+      uint64_t currentSchedulerMillis = getMillis();
 
-      unsigned long firstScheduledUptimeMillis = 0;
+      uint64_t firstScheduledUptimeMillis = 0;
       if (first != NULL) {
         firstScheduledUptimeMillis = first->scheduledUptimeMillis;
       }
 
-      unsigned long maxWaitTimeMillis = 0;
+      uint64_t maxWaitTimeMillis = 0;
       if (firstScheduledUptimeMillis > currentSchedulerMillis) {
         maxWaitTimeMillis = firstScheduledUptimeMillis - currentSchedulerMillis;
       }
@@ -210,16 +213,16 @@ void Scheduler::sleepIfRequired() {
 
 inline Scheduler::SleepMode Scheduler::evaluateSleepMode() {
   noInterrupts();
-  unsigned long currentSchedulerMillis = getMillis();
+  uint64_t currentSchedulerMillis = getMillis();
 
-  unsigned long firstScheduledUptimeMillis = 0;
+  uint64_t firstScheduledUptimeMillis = 0;
   if (first != NULL) {
     firstScheduledUptimeMillis = first->scheduledUptimeMillis;
   }
   interrupts();
 
   SleepMode sleepMode = NO_SLEEP;
-  unsigned long maxWaitTimeMillis = 0;
+  uint64_t maxWaitTimeMillis = 0;
   if (firstScheduledUptimeMillis > currentSchedulerMillis) {
     maxWaitTimeMillis = firstScheduledUptimeMillis - currentSchedulerMillis;
   }
@@ -241,8 +244,7 @@ inline Scheduler::SleepMode Scheduler::evaluateSleepMode() {
 
 #ifdef ESP32
 // -------------------------------------------------------------------------------------------------
-void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
-  unsigned long sleep_duration_ms = durationMs;
+void Scheduler::sleep(uint64_t durationMs, bool queueEmpty) {
   bool timerWakeup;
   if (durationMs > 0) {
     esp_sleep_enable_timer_wakeup(durationMs * 1000L);
@@ -260,19 +262,18 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
 
 
   // if the sleep time is high enough, use deep sleep, else use light sleep
-  if (durationMs > 20000L)
+  if (durationMs > 10000L)
   {
-    sleep_duration_ms = durationMs * 0.95; // sleep for a fraction of the time, to account for inacurate clock
     // call callback if defined
     if (before_sleep_callback) {
-      before_sleep_callback(SleepMethod::DEEP_SLEEP, sleep_duration_ms);
+      before_sleep_callback(SleepMethod::DEEP_SLEEP, durationMs);
     }
-    esp_sleep_enable_timer_wakeup(sleep_duration_ms * 1000L);
+    esp_sleep_enable_timer_wakeup(durationMs * 1000L);
     esp_deep_sleep_start();
   } else {
     // call callback if defined
     if (before_sleep_callback) {
-      before_sleep_callback(SleepMethod::LIGHT_SLEEP, sleep_duration_ms);
+      before_sleep_callback(SleepMethod::LIGHT_SLEEP, durationMs);
     }
     esp_light_sleep_start();
   }
@@ -283,8 +284,7 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
 }
 #elif ESP8266
 // -------------------------------------------------------------------------------------------------
-void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
-  unsigned long sleep_duration_ms = durationMs;
+void Scheduler::sleep(uint64_t durationMs, bool queueEmpty) {
 #ifdef ESP_DEEP_SLEEP_FOR_INFINITE_SLEEP
   if (queueEmpty) {
     ESP.deepSleep(0); // does not return
@@ -297,7 +297,7 @@ void Scheduler::sleep(unsigned long durationMs, bool queueEmpty) {
 
   // call callback if defined
   if (before_sleep_callback) {
-    before_sleep_callback(SleepMethod::ACTIVE, sleep_duration_ms);
+    before_sleep_callback(SleepMethod::ACTIVE, durationMs);
   }
 
   delay(durationMs);

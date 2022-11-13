@@ -74,7 +74,7 @@ class Scheduler {
     };
     class Task {
       public:
-        Task(const unsigned long scheduledUptimeMillis, const bool isCallbackTask, const char * task_id)
+        Task(const uint64_t scheduledUptimeMillis, const bool isCallbackTask, const char * task_id)
           : scheduledUptimeMillis(scheduledUptimeMillis), isCallbackTask(isCallbackTask), next(NULL), task_id(task_id) {
         }
         void execute() {
@@ -93,7 +93,7 @@ class Scheduler {
             return !task->isCallbackTask && ((RunnableTask*)task)->runnable == ((RunnableTask*)this)->runnable;
           }
         }
-        const unsigned long scheduledUptimeMillis;
+        const uint64_t scheduledUptimeMillis;
         // dynamic_cast is not supported by default as it compiles with -fno-rtti
         // Therefore, we use this variable to detect which Task type it is.
         const bool isCallbackTask;
@@ -135,13 +135,13 @@ class Scheduler {
       @param callback: the method to be called on the main thread
       @param delayMillis: the time to wait in milliseconds until the callback shall be made
     */
-    void scheduleDelayed(void (*callback)(), unsigned long delayMillis, const char *task_id);
+    void scheduleDelayed(void (*callback)(), uint64_t delayMillis, const char *task_id);
     /**
       Schedule the callback after delayMillis milliseconds.
       @param runnable: the Runnable on which the run() method will be called on the main thread
       @param delayMillis: the time to wait in milliseconds until the callback shall be made
     */
-    void scheduleDelayed(Runnable *runnable, unsigned long delayMillis, const char *task_id);
+    void scheduleDelayed(Runnable *runnable, uint64_t delayMillis, const char *task_id);
 
     /**
       Schedule the callback uptimeMillis milliseconds after the device was started.
@@ -151,7 +151,7 @@ class Scheduler {
       @param uptimeMillis: the time in milliseconds since the device was started
                            to schedule the callback.
     */
-    void scheduleAt(void (*callback)(), unsigned long uptimeMillis, const char *task_id);
+    void scheduleAt(void (*callback)(), uint64_t uptimeMillis, const char *task_id);
     /**
       Schedule the callback uptimeMillis milliseconds after the device was started.
       Please be aware that uptimeMillis is stopped when no task is pending. In this case,
@@ -160,7 +160,7 @@ class Scheduler {
       @param uptimeMillis: the time in milliseconds since the device was started
                            to schedule the callback.
     */
-    void scheduleAt(Runnable *runnable, unsigned long uptimeMillis, const char *task_id);
+    void scheduleAt(Runnable *runnable, uint64_t uptimeMillis, const char *task_id);
 
     /**
       Schedule the callback method as next task even if other tasks are in the queue already.
@@ -193,7 +193,7 @@ class Scheduler {
       Returns the scheduled time of the task that is currently running.
       If no task is currently running, 0 is returned.
     */
-    unsigned long getScheduleTimeOfCurrentTask() const;
+    uint64_t getScheduleTimeOfCurrentTask() const;
 
     /**
       Cancel all schedules that were scheduled for this callback.
@@ -251,7 +251,7 @@ class Scheduler {
               This value does not consider the time when the CPU is in infinite deep sleep
               while nothing is in the queue.
     */
-    unsigned long getMillis() const;
+    uint64_t getMillis() const;
 
 #ifdef SUPERVISION_CALLBACK
 #ifdef ESP8266
@@ -285,14 +285,14 @@ class Scheduler {
   private:
     class CallbackTask: public Task {
       public:
-        CallbackTask(void (*callback)(), const unsigned long scheduledUptimeMillis, const char *task_id)
+        CallbackTask(void (*callback)(), const uint64_t scheduledUptimeMillis, const char *task_id)
           : Task(scheduledUptimeMillis, true, task_id), callback(callback) {
         }
         void (* const callback)();
     };
     class RunnableTask: public Task {
       public:
-        RunnableTask(Runnable *runnable, const unsigned long scheduledUptimeMillis, const char *task_id)
+        RunnableTask(Runnable *runnable, const uint64_t scheduledUptimeMillis, const char *task_id)
           : Task(scheduledUptimeMillis, false, task_id), runnable(runnable) {
         }
         Runnable * const runnable;
@@ -335,7 +335,7 @@ class Scheduler {
       The time in millis since start up when the last task finished.
       Used to delay deep sleep.
     */
-    unsigned long lastTaskFinishedMillis;
+    uint64_t lastTaskFinishedMillis;
 #endif
 
     inline void setupTaskTimeoutIfConfigured();
@@ -408,22 +408,22 @@ void Scheduler::scheduleOnce(Runnable *runnable, const char *task_id) {
   insertTaskAndRemoveExisting(newTask);
 }
 
-void Scheduler::scheduleDelayed(void (*callback)(), unsigned long delayMillis, const char *task_id) {
+void Scheduler::scheduleDelayed(void (*callback)(), uint64_t delayMillis, const char *task_id) {
   Task *newTask = new CallbackTask(callback, getMillis() + delayMillis, task_id);
   insertTask(newTask);
 }
 
-void Scheduler::scheduleDelayed(Runnable *runnable, unsigned long delayMillis, const char *task_id) {
+void Scheduler::scheduleDelayed(Runnable *runnable, uint64_t delayMillis, const char *task_id) {
   Task *newTask = new RunnableTask(runnable, getMillis() + delayMillis, task_id);
   insertTask(newTask);
 }
 
-void Scheduler::scheduleAt(void (*callback)(), unsigned long uptimeMillis, const char *task_id) {
+void Scheduler::scheduleAt(void (*callback)(), uint64_t uptimeMillis, const char *task_id) {
   Task *newTask = new CallbackTask(callback, uptimeMillis, task_id);
   insertTask(newTask);
 }
 
-void Scheduler::scheduleAt(Runnable *runnable, unsigned long uptimeMillis, const char *task_id) {
+void Scheduler::scheduleAt(Runnable *runnable, uint64_t uptimeMillis, const char *task_id) {
   Task *newTask = new RunnableTask(runnable, uptimeMillis, task_id);
   insertTask(newTask);
 }
@@ -474,7 +474,7 @@ bool Scheduler::isScheduled(Runnable *runnable) const {
   return scheduled;
 }
 
-unsigned long Scheduler::getScheduleTimeOfCurrentTask() const {
+uint64_t Scheduler::getScheduleTimeOfCurrentTask() const {
   noInterrupts();
   if (current != NULL) {
     return current->scheduledUptimeMillis;
