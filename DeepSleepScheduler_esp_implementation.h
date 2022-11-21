@@ -28,7 +28,7 @@ extern "C"
 uint64_t Scheduler::getMillis() const {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    return (tv.tv_sec)*1000+tv.tv_usec/1000; // substract epoch from 2020
+    return ((int64_t)tv.tv_sec)*1000+((int64_t)tv.tv_usec)/1000;
   // return rtc_time_slowclk_to_us(rtc_time_get(), esp_clk_slowclk_cal_get()) / 1000;
 }
 
