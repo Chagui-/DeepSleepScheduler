@@ -194,6 +194,10 @@ class Scheduler {
     uint64_t getScheduleTimeOfCurrentTask() const;
 
     /**
+      Cancel all schedules.
+    */
+    void removeAllTasks();
+    /**
       Cancel all schedules that were scheduled for this callback.
       @param callback: method of which all schedules shall be removed
     */
@@ -475,6 +479,21 @@ uint64_t Scheduler::getScheduleTimeOfCurrentTask() const {
   }
   interrupts();
   return 0;
+}
+
+void Scheduler::removeAllTasks() {
+  noInterrupts();
+  if (first != NULL) {
+    Task *previousTask = NULL;
+    Task *currentTask = first;
+    while (currentTask != NULL) {
+      Task *taskToDelete = currentTask;
+      first = taskToDelete->next;
+      currentTask = taskToDelete->next;
+      delete taskToDelete;
+    }
+  }
+  interrupts();
 }
 
 void Scheduler::removeCallbacks(void (*callback)()) {
