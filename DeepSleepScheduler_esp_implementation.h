@@ -1,4 +1,5 @@
 
+#define ESP32
 #ifdef ESP32
 #include <esp_sleep.h>
 #include <esp32-hal-timer.h>

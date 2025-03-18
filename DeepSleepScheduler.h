@@ -36,9 +36,7 @@
 // Definition (usually in H file)
 // -------------------------------------------------------------------------------------------------
 #include <Arduino.h>
-#if defined(ESP32) || defined(ESP8266)
 #include "DeepSleepScheduler_esp_includes.h"
-#endif
 
 #define BUFFER_TIME 2
 #define NOT_USED 255
@@ -353,11 +351,7 @@ class Scheduler {
     //
     // // only used for AVR
     // void wdtEnableInterrupt();
-#if defined(ESP32) || defined(ESP8266)
 #include "DeepSleepScheduler_esp_definition.h"
-#else
-#include "DeepSleepScheduler_avr_definition.h"
-#endif
 };
 
 extern Scheduler scheduler;
@@ -709,10 +703,6 @@ void Scheduler::execute() {
 
 #endif // #ifndef LIBCALL_DEEP_SLEEP_SCHEDULER
 
-#if defined(ESP32) || defined(ESP8266)
 #include "DeepSleepScheduler_esp_implementation.h"
-#else
-#include "DeepSleepScheduler_avr_implementation.h"
-#endif
 
 #endif // #ifndef DEEP_SLEEP_SCHEDULER_H

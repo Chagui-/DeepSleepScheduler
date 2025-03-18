@@ -9,6 +9,7 @@
 #define ESP8266_MAX_DELAY_TIME_MS 7000
 #endif
 
+#define ESP32
 private:
 void init();
 
